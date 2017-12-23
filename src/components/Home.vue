@@ -120,8 +120,7 @@ export default {
     },
 
     mounted() {
-        // this.socket = io('https://stream-manager.herokuapp.com/');
-        this.socket = io('localhost:3000');
+        this.socket = io('https://stream-manager.herokuapp.com/');
 
         this.socket.on('connect', () => {
             this.socket.emit('register-worker');
