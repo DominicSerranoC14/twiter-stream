@@ -1,14 +1,43 @@
 <template>
     <div class="">
         <div class="header">
-            <h1>Live Tweets | Total: {{ statusList.length }}</h1>
+            <h1>Live Tweets 
+                <span v-if="mode === 'stream'">
+                    | Total: {{ statusList.length }}
+                </span>
+            </h1>
 
-            <button :disabled="connectingStream || streaming" @click="startStream">Start Stream</button>
+            <div class="options-container" v-if="mode === 'options'">
+                <div class="spread">
+                    <label for="language">Stream Language(s)</label>
+                    <input type="text" v-model="language" />
+                </div>
 
-            <div class="filter-input">
-                <p>Search by Name, Username or Tweet Text</p>
-                <input type="text" placeholder="Filter" v-model="filterString" />
-                <p v-if="filterString"> Filter Results: {{ filterArray.length }}</p>
+                <div class="spread">
+                    <label for="track-string">Track</label>
+                    <input type="text" v-model="trackString" />
+                    <p>* Keywords to track. Phrases of keywords are specified by a comma-separated list.</p>
+                </div>
+
+                <div>
+                    <button @click="saveStreamSettings" :disabled="canSaveOptions">Save Settings</button>
+                </div>
+            </div>
+
+            <br>
+
+            <div v-if="mode === 'stream'">
+                <div>
+                    <button :disabled="canStartStream" @click="startStream">Start Stream</button>
+
+                    <button @click="stopStream" :disabled="!streaming">Stop Stream</button>
+                </div>
+
+                <div class="filter-input">
+                    <p>Search by Name, Username or Tweet Text</p>
+                    <input type="text" placeholder="Filter" v-model="filterString" />
+                    <p v-if="filterString"> Filter Results: {{ filterArray.length }}</p>
+                </div>
             </div>
         </div>
 
@@ -26,15 +55,26 @@ export default {
 
     data () {
         return {
-            socket: null,
-            streaming: false,
             connectingStream: false,
             filterString: '',
+            language: '',
+            mode: 'options',
+            trackString: '',
+            socket: null,
             statusList: [],
+            streaming: false,
         }
     },
 
     computed: {
+        canSaveOptions() {
+            return (!this.language || !this.trackString);
+        },
+
+        canStartStream() {
+            return (this.connectingStream || this.streaming);
+        },
+
         filterArray() {
             return this.statusList.filter(status => {
                 const { displayText, name, screen_name, status_id } = status;
@@ -50,21 +90,38 @@ export default {
                     return status;
                 }
             });
-        }
+        },
     },
 
     methods: {
-        formatStatusData(status) {
+        formatStatusData(status) {            
             this.statusList.unshift(status);
+        },
+
+        formatOptions() {
+            return {
+                language: this.language,
+                track: this.trackString,
+            };
+        },
+
+        saveStreamSettings() {
+            this.socket.emit('set-options', this.formatOptions());
+            this.mode = 'stream';
         },
 
         startStream() {
             this.socket.emit('start-stream');
         },
+
+        stopStream() {
+            this.socket.emit('stop-stream');
+        },
     },
 
     mounted() {
-        this.socket = io('https://stream-manager.herokuapp.com/');
+        // this.socket = io('https://stream-manager.herokuapp.com/');
+        this.socket = io('localhost:3000');
 
         this.socket.on('connect', () => {
             this.socket.emit('register-worker');
@@ -72,6 +129,11 @@ export default {
 
         this.socket.on('stream-active', (active) => {
             this.streaming = active;
+
+            // If a new client connects, and a stream is active, this will put them in the stream viewing mode
+            if (this.mode === 'options' && this.streaming) {
+                this.mode = 'stream';
+            }
         });
 
         this.socket.on('received-status', (data) => {
@@ -79,13 +141,25 @@ export default {
         });
 
         this.socket.on('stream-closed', () => {
+            // Only execute the following code once. This may be firing for every socket connected to a room
+            this.mode = 'options';
+            this.statusList = [];
             alert('The stream has closed, try to start a new one.');
+        });
+
+        this.socket.on('user-error', (msg) => {
+            alert(msg);
         });
 
         this.socket.on('on-error', (msg) => {
             console.error(msg);
         });
-    }
+    },
+
+    beforeDestroy() {
+        // Disconnects the client socket when the component unmounts to avoid multiple sockets still being attached to the server and duplicating events.
+        this.socket.disconnect();
+    },
 }
 </script>
 
@@ -115,6 +189,10 @@ export default {
     flex-direction: row;
     flex-wrap: wrap;
     justify-content: center;
+}
+
+.spread {
+    margin-bottom: 20px;
 }
 
 h1, h2 {
