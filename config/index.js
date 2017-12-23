@@ -4,6 +4,7 @@ var path = require('path')
 module.exports = {
   build: {
     env: require('./prod.env'),
+    // If using gh-pages to host, need to build a docs directory and push up
     index: path.resolve(__dirname, '../docs/index.html'),
     assetsRoot: path.resolve(__dirname, '../docs'),
     assetsSubDirectory: 'static',
