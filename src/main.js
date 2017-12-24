@@ -3,6 +3,12 @@
 import Vue from 'vue'
 import App from './App'
 
+// Load bootstrap v4 scss and js
+import 'bootstrap/scss/bootstrap.scss';
+
+// Import local styles
+import './main.scss';
+
 Vue.config.productionTip = false
 
 /* eslint-disable no-new */

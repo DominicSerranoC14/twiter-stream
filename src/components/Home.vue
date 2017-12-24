@@ -1,55 +1,46 @@
 <template>
-    <div class="">
-        <div class="header">
-            <h1>Live Tweets 
+    <div class="container">
+        <div class="header clearfix">
+            <h3 class="text-muted">
+                Twitter Stream
                 <span v-if="mode === 'stream'">
                     | Total: {{ statusList.length }}
                 </span>
-            </h1>
+            </h3>
+        </div>
 
-            <div class="options-container" v-if="mode === 'options'">
-                <div class="spread">
-                    <label for="language">Stream Language(s)</label>
-                    <input type="text" v-model="language" />
-                </div>
+        <options-menu v-if="mode === 'options'"
+            :save-stream-settings="saveStreamSettings">
+        </options-menu>
 
-                <div class="spread">
-                    <label for="track-string">Track</label>
-                    <input type="text" v-model="trackString" />
-                    <p>* Keywords to track. Phrases of keywords are specified by a comma-separated list.</p>
-                </div>
+        <div class="jumbotron" v-if="mode === 'stream'">
+            <div class="text-center">
+                <button class="btn btn-primary" :disabled="canStartStream" @click="startStream">Start Stream</button>
 
-                <div>
-                    <button @click="saveStreamSettings" :disabled="canSaveOptions">Save Settings</button>
-                </div>
+                <button class="btn btn-danger" @click="stopStream" :disabled="!streaming">Stop Stream</button>
             </div>
 
-            <br>
-
-            <div v-if="mode === 'stream'">
-                <div>
-                    <button :disabled="canStartStream" @click="startStream">Start Stream</button>
-
-                    <button @click="stopStream" :disabled="!streaming">Stop Stream</button>
-                </div>
-
-                <div class="filter-input">
-                    <p>Search by Name, Username or Tweet Text</p>
-                    <input type="text" placeholder="Filter" v-model="filterString" />
-                    <p v-if="filterString"> Filter Results: {{ filterArray.length }}</p>
-                </div>
+            <div class="filter-input text-center mt-4">
+                <p>Search by Name, Username or Tweet Text</p>
+                <input type="text" placeholder="Filter" v-model="filterString" />
+                <p v-if="filterString"> Filter Results: {{ filterArray.length }}</p>
             </div>
         </div>
 
         <div class="tweet-container">
             <tweet v-for="(status, i) in filterArray" :key="i" :status="status"></tweet>
         </div>
+
+        <footer class="footer">
+            <p>Built with Vue.js, Node.js and Socket.io</p>
+        </footer>
     </div>
 </template>
 
 <script>
 export default {
     components: {
+        'options-menu': require('./Options.vue'),
         'tweet': require('./Tweet.vue'),
     },
 
@@ -57,9 +48,7 @@ export default {
         return {
             connectingStream: false,
             filterString: '',
-            language: '',
             mode: 'options',
-            trackString: '',
             socket: null,
             statusList: [],
             streaming: false,
@@ -67,10 +56,6 @@ export default {
     },
 
     computed: {
-        canSaveOptions() {
-            return (!this.language || !this.trackString);
-        },
-
         canStartStream() {
             return (this.connectingStream || this.streaming);
         },
@@ -94,19 +79,12 @@ export default {
     },
 
     methods: {
-        formatStatusData(status) {            
+        formatStatusData(status) {
             this.statusList.unshift(status);
         },
 
-        formatOptions() {
-            return {
-                language: this.language,
-                track: this.trackString,
-            };
-        },
-
-        saveStreamSettings() {
-            this.socket.emit('set-options', this.formatOptions());
+        saveStreamSettings(options) {
+            this.socket.emit('set-options', options);
             this.mode = 'stream';
         },
 
