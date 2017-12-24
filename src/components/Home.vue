@@ -32,7 +32,9 @@
         </div>
 
         <footer class="footer">
-            <p>Built with Vue.js, Node.js and Socket.io</p>
+            <p>Built with Vue.js, Node.js and Socket.io by
+                <a href="https://dominicserrano.com">Dominic Serrano</a>
+            </p>
         </footer>
     </div>
 </template>
