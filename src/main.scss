@@ -1,0 +1,9 @@
+.jumbotron {
+    padding: 2rem;
+}
+
+button[disabled].btn {
+    background-color: grey;
+    border-color: grey;
+    cursor: not-allowed;
+}

@@ -10,7 +10,10 @@
     "build": "node build/build.js"
   },
   "dependencies": {
+    "bootstrap": "^4.0.0-alpha.6",
+    "jquery": "^3.2.1",
     "node-sass": "^4.5.3",
+    "popper.js": "^1.12.9",
     "sass-loader": "^6.0.6",
     "socket.io-client": "^2.0.3",
     "vue": "^2.3.3"
