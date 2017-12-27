@@ -1,37 +1,41 @@
 <template>
-    <div class="container">
-        <div class="header clearfix">
-            <h3 class="text-muted">
-                Twitter Stream
-                <span v-if="mode === 'stream'">
-                    | Total: {{ statusList.length }}
-                </span>
-            </h3>
+    <div>
+        <div class="header">
+            <h3 class="text-muted">Twitter Stream</h3>
+
+            <button class="btn btn-primary"
+                :disabled="streaming" v-if="mode === 'stream'"
+                @click="changeMode('options')">Options Menu
+            </button>
         </div>
 
-        <options-menu v-if="mode === 'options'"
-            :save-stream-settings="saveStreamSettings">
+        <options-menu v-show="mode === 'options'"
+            :language="language"
+            :save-stream-settings="saveStreamSettings"
+            :set-language="setLanguage"
+            :set-track-string="setTrackString"
+            :track-string="trackString">
         </options-menu>
 
-        <div class="jumbotron" v-if="mode === 'stream'">
-            <div class="text-center">
-                <button class="btn btn-primary" :disabled="canStartStream" @click="startStream">Start Stream</button>
+        <stream-menu v-if="mode === 'stream'"
+            :connecting-stream="connectingStream"
+            :created-at="createdAt"
+            :filter-array="filterArray"
+            :filter-string="filterString"
+            :language="language"
+            :start-stream="startStream"
+            :set-filter-string="setFilterString"
+            :status-list-length="statusListLength"
+            :stop-stream="stopStream"
+            :streaming="streaming"
+            :track-string="trackString">
+        </stream-menu>    
 
-                <button class="btn btn-danger" @click="stopStream" :disabled="!streaming">Stop Stream</button>
-            </div>
-
-            <div class="filter-input text-center mt-4">
-                <p>Search by Name, Username or Tweet Text</p>
-                <input type="text" placeholder="Filter" v-model="filterString" />
-                <p v-if="filterString"> Filter Results: {{ filterArray.length }}</p>
-            </div>
-        </div>
-
-        <div class="tweet-container">
+        <div class="tweet-container" v-show="mode === 'stream'">
             <tweet v-for="(status, i) in filterArray" :key="i" :status="status"></tweet>
         </div>
 
-        <footer class="footer">
+        <footer class="container footer">
             <p>Built with Vue.js, Node.js and Socket.io by
                 <a href="https://dominicserrano.com">Dominic Serrano</a>
             </p>
@@ -43,25 +47,26 @@
 export default {
     components: {
         'options-menu': require('./Options.vue'),
+        'stream-menu': require('./Stream.vue'),
         'tweet': require('./Tweet.vue'),
     },
 
     data () {
         return {
+            // Move all data values to vuex store eventually
             connectingStream: false,
+            createdAt: '',
             filterString: '',
+            language: null,
             mode: 'options',
             socket: null,
             statusList: [],
             streaming: false,
+            trackString: '',
         }
     },
 
     computed: {
-        canStartStream() {
-            return (this.connectingStream || this.streaming);
-        },
-
         filterArray() {
             return this.statusList.filter(status => {
                 const { displayText, name, screen_name, status_id } = status;
@@ -78,11 +83,19 @@ export default {
                 }
             });
         },
+
+        statusListLength() {
+            return this.statusList.length;
+        }
     },
 
     methods: {
+        changeMode(mode) {
+            this.mode = mode;
+        },
+
         formatStatusData(status) {
-            this.statusList.unshift(status);
+            this.statusList.push(status);
         },
 
         saveStreamSettings(options) {
@@ -90,7 +103,27 @@ export default {
             this.mode = 'stream';
         },
 
+        setFilterString(event) {
+            this.filterString = event.target.value;
+        },
+
+        setLanguage(language) {            
+            this.language = language;
+        },
+
+        setTrackString(event) {
+            this.trackString = event.target.value;            
+        },
+
+        setStreamOptions(options) {
+            this.language = options.language;
+            this.trackString = options.track;
+            this.createdAt = options.createdAt;
+        },
+
         startStream() {
+            // Clear list if user had a stream previously open
+            this.statusList = [];
             this.socket.emit('start-stream');
         },
 
@@ -101,6 +134,7 @@ export default {
 
     mounted() {
         this.socket = io('https://stream-manager.herokuapp.com/');
+        // this.socket = io('localhost:3000');
 
         this.socket.on('connect', () => {
             this.socket.emit('register-worker');
@@ -115,14 +149,14 @@ export default {
             }
         });
 
+        this.socket.on('stream-options', this.setStreamOptions);
+
         this.socket.on('received-status', (data) => {
             this.formatStatusData(data);
         });
 
         this.socket.on('stream-closed', () => {
             // Only execute the following code once. This may be firing for every socket connected to a room
-            this.mode = 'options';
-            this.statusList = [];
             alert('The stream has closed, try to start a new one.');
         });
 
@@ -145,22 +179,13 @@ export default {
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style lang="scss" scoped>
 .header {
-    text-align: center;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
     margin-bottom: 20px;
 
-    button {
-        font-size: 14px;
-        padding: 5px 10px;
-    }
-
-    .filter-input {
-        margin-top: 10px;
-
-        input {
-            font-size: 14px;
-            padding: 5px;
-        }
-    }
+    h3 { margin: 0; }
 }
 
 .tweet-container {
@@ -168,27 +193,5 @@ export default {
     flex-direction: row;
     flex-wrap: wrap;
     justify-content: center;
-}
-
-.spread {
-    margin-bottom: 20px;
-}
-
-h1, h2 {
-    font-weight: normal;
-}
-
-ul {
-    list-style-type: none;
-    padding: 0;
-}
-
-li {
-    display: inline-block;
-    margin: 0 10px;
-}
-
-a {
-    color: #42b983;
 }
 </style>
